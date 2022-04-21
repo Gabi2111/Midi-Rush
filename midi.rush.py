@@ -53,7 +53,9 @@ class map:
         self.wall=set()
         self.side=set()
         self.sprites={}
+        self.sprites2={}
         self.speed=[0,0]
+        self.slist=[self.karte,self.sprites,self.sprites2]
         text=open(karte,'r')
         lines=text.readlines()
         c_line=0
@@ -105,23 +107,26 @@ class map:
             #grünes gras
             if (w[0],w[1]-1) not in self.wall and self.karte[(w[1],w[0])][2]=='f':
                 print(w,self.karte[(w[1],w[0])])
-                self.sprites[(w[1]-1,w[0])]=[pg.image.load("./game-data/"+str(size)+"/grass.gif"),None,char]
-                self.addrect((w[1]-1,w[0]),'sprite')
+                self.sprites2[(w[1]-1,w[0])]=[pg.image.load("./game-data/"+str(size)+"/grass.gif"),None,char]
+                self.addrect((w[1]-1,w[0]),'sprite2')
         
         self.wall0=self.wall.copy()
         self.side0=self.side.copy()
     def addrect(self,c,typ='karte'):
-        if typ!='karte':
+        if typ=='sprite2':
+            print('helau')
+            self.sprites2[c][1]=self.sprites2[c][0].get_rect(topleft=(size*c[1],size*c[0]))
+        elif typ!='karte':
             self.sprites[c][1]=self.sprites[c][0].get_rect(topleft=(size*c[1],size*c[0]))
         else:    
             self.karte[c][1]=self.karte[c][0].get_rect(topleft=(size*c[1],size*c[0]))
     def read(self,coord):
         return self.karte(coord)
     def mov(self,speed):
-        for sprite in self.karte:
-            self.karte[sprite][1]=self.karte[sprite][1].move(speed)
-        for sprite in self.sprites:
-            self.sprites[sprite][1]=self.sprites[sprite][1].move(speed)
+        for k in self.slist:
+            for sprite in k:
+                k[sprite][1]=k[sprite][1].move(speed)
+        
         stack=set()
         for pos in self.wall0:
             stack.add((int(self.karte[(pos[1],pos[0])][1].midtop[0]/size),int(self.karte[(pos[1],pos[0])][1].midtop[1]/size)))
@@ -418,11 +423,9 @@ def game2():
     
     #Darstellung der Karte                
 
-    for k in m.karte:
-        screen.blit(m.karte[k][0],m.karte[k][1])
-    for k in m.sprites:
-        screen.blit(m.sprites[k][0],m.sprites[k][1])
-        
+    for k in m.slist:
+        for l in k:
+            screen.blit(k[l][0],k[l][1])
 
     #screen.blit(face, facerect)
     s=p.fig.get_rect(center=(p.figrect.center[0]+size/3.5,p.figrect.center[1]))
