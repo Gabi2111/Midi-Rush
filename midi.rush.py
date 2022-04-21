@@ -13,9 +13,14 @@ import sys
 import time
 
 x,y=8,6
-size=64
+size=128
 width=x*size
 height=y*size
+def set_mode():
+    global width, height
+    width=x*size
+    height=y*size
+
 fps=30
 white=255,255,255
 
@@ -179,6 +184,7 @@ class player:
         self.figrect=copy
         self.figrect=self.fig.get_rect(center=center)
         
+p=player()
         
 def pos(coord,shift_y=0):
     if shift_y!=0:
@@ -187,17 +193,28 @@ def pos(coord,shift_y=0):
 
 
 class button:
-    def __init__(self, text, pos):
+    def __init__(self, text, pos, bigness=2):
+        self.text=text
         self.pos=pos
-        self.font = pg.font.SysFont("Arial", int(size/8))
+        self.font = pg.font.SysFont("Arial", bigness*int(size/8))
         self.button=self.font.render(text,True,pg.Color('White'))
         self.size=self.button.get_size()
         self.surface=pg.Surface(self.size)
+        self.surfacerect=self.surface.get_rect(topleft=self.pos)
         self.surface.blit(self.button,(0,0))
     def draw(self):
         screen.blit(self.surface, self.pos)
+    def centerdraw(self,height):
+        self.surfacerect=self.surface.get_rect(midtop=(8*size/2,height))
+        screen.blit(self.surface, self.surfacerect)
+    def go_big(self,bigness=2):
+        rect=self.surfacerect.center
+        self.__init__(self.text,self.pos,bigness)
+        screen.blit(self.surface, self.surface.get_rect(center=rect))
+        
+        
  
-p=player()
+
 print(m.sprites)
 rotate=False
 
@@ -208,20 +225,23 @@ midi.init()
 
 #default_id = 5 #midi.get_default_input_id()
 #midi_input = midi.Input(device_id=default_id)
-midimenu = True
-
+midimenu = False
+midi2 = False
 
 
 def mid_menu():
+    global midi
     for i in range(midi.get_count()):
         print('release')
         time.sleep(2)
         try:
+            global midi_input
             midi_input=midi.Input(device_id=i)
             print('Press a key on the midi device.')
             time.sleep(2)
             if midi_input.poll():
                 print('device id=',i,' (success)')
+                midi=True
                 return True, i
         except:
             print('You or the device failed!')
@@ -231,37 +251,75 @@ def mid_menu():
     return None
 
 startbutton=button('Starte das verdammte Spiel Du Hurensohn',(0,0))
+midibutton=button('Midi-Menu',(0,0))
+exitbutton=button('Schnell weg hier!',(0,0))
+s64button=button('64',(16,16))
+s128button=button('128',(3*size/4,16))
 
 running=True
-while running:
+game=False
+buttons={startbutton,midibutton,exitbutton,s64button,s128button}
+def menu():
+    global running
+    global game
+    global size
+    global screen
+    screen.fill('Black')
+    startbutton.centerdraw(size*1)
+    midibutton.centerdraw(size*2)
+    exitbutton.centerdraw(size*5)
+    s64button.draw()
+    s128button.draw()
     
-    # Midi-Einrichtung
+    for event in pg.event.get():
+
+            
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if event.button==1:
+                print(event.pos,startbutton.surfacerect)
+                if startbutton.surfacerect.collidepoint(event.pos):
+                    game=True    
+                if midibutton.surfacerect.collidepoint(event.pos):
+                    game=True
+                    mid_menu()
+                    midimenu=True
+                if exitbutton.surfacerect.collidepoint(event.pos):
+                    running=False
+                if s64button.surfacerect.collidepoint(event.pos):
+                    size=64
+                    set_mode()
+                    m.__init__()
+                    p.__init__("./game-data/"+str(size)+"/player.gif")
+                    s128button.__init__(s128button.text,(3*size/4,16))
+                    screen=pg.display.set_mode((width,height))
+
+                if s128button.surfacerect.collidepoint(event.pos):
+                    size=128
+                    set_mode()
+                    m.__init__()
+                    p.__init__("./game-data/"+str(size)+"/player.gif")
+                    s128button.__init__(s128button.text,(3*size/4,16))
+                    screen=pg.display.set_mode((width,height))
+                    
+
+        elif event.type == pg.MOUSEMOTION:
+            for k in buttons:
+                if k.surfacerect.collidepoint(event.pos):
+                    k.go_big(3)
+                else: 
+                    k.go_big()
     
-    if midimenu:
-        aa,bb=mid_menu()
-        if aa==True:
-            print(bb)
-            midi.quit()
-            midi.init()
-            midi_input=midi.Input(device_id=bb)
-            midimenu=False
-        print('Bassdrum, dont press')
-        standard_event=[]
-        time.sleep(10)
-        while len(standard_event)==0:
-            for event in midi_input.read(16):
-                standard_event.append(event[0])
-        print('now press Bass')
-        while aa:
-            if midi_input.poll():
-                for k in midi_input.read(16):
-                    if k[0] not in standard_event:
-                        print(k,standard_event)
-                        bass=k[0]
-                        aa=False
-                        time.sleep(5)
-    # Tastatur-Eingabe
-        
+        if event.type == pg.QUIT or not running:
+            print("STRIKE!!!!!!!!!!!!!!!!!! or p.tl in m.wall or p.tr in m.wall or p.tl in m.wall or p.tr in m.wall!!!!!")
+            running= False
+            print("hä")
+            pg.quit()
+            sys.exit()
+    
+    pg.display.flip()
+
+def game2():
+    global game   
     for event in pg.event.get():
         if event.type == pg.QUIT:
             print("STRIKE!!!!!!!!!!!!!!!!!! or p.tl in m.wall or p.tr in m.wall or p.tl in m.wall or p.tr in m.wall!!!!!")
@@ -288,13 +346,15 @@ while running:
                 #rotate=False
             if event.key == pg.K_LEFT:
                 p.speed[0]+=0.01*size/64
+            if event.key == pg.K_ESCAPE:
+                game=False
 
     # Midi-Input
-    
-    if midi_input.poll():
-        for i in midi_input.read(num_events=16):
-            if i[0][1]==bass[1]:
-                print('BASS')
+    if midi2:
+        if midi_input.poll():
+            for i in midi_input.read(num_events=16):
+                if i[0][1]==bass[1]:
+                    print('BASS')
             
     # Uhr
     
@@ -302,8 +362,16 @@ while running:
     
     # Quatsch
     
-    facerect=facerect.move(speed)
-    
+    ''' facerect=facerect.move(speed)
+        if pos(facerect.center) in m.wall:
+            q=0
+            for i in range(3):
+                if pos(facerect.center) in (i,m.side):
+                    speed[0]=-speed[0]
+                    q+=1
+                       
+            if q==0:
+                speed=[-speed[1],-speed[0]]   ''' 
     #Playerupdate
     
     p.figrect=p.figrect.move(0,p.speed[1])
@@ -345,15 +413,7 @@ while running:
     
     #if p.tl in m.wall and  or p.tr 
 
-    if pos(facerect.center) in m.wall:
-        q=0
-        for i in range(3):
-            if pos(facerect.center) in (i,m.side):
-                speed[0]=-speed[0]
-                q+=1
-                   
-        if q==0:
-            speed=[-speed[1],-speed[0]]
+
     
     
     #Darstellung der Karte                
@@ -364,9 +424,44 @@ while running:
         screen.blit(m.sprites[k][0],m.sprites[k][1])
         
 
-    screen.blit(face, facerect)
+    #screen.blit(face, facerect)
     s=p.fig.get_rect(center=(p.figrect.center[0]+size/3.5,p.figrect.center[1]))
     screen.blit(p.fig,s)
-    startbutton.draw()
     pg.display.flip()
     
+    
+while running:
+    
+    # Midi-Einrichtung
+    if midimenu:
+        
+        pg.display.flip()
+        aa,bb=mid_menu()
+        if aa==True:
+            print(bb)
+            midi.quit()
+            midi.init()
+            midi_input=midi.Input(device_id=bb)
+            midimenu=False
+        print('Bassdrum, dont press')
+        standard_event=[]
+        time.sleep(10)
+        while len(standard_event)==0:
+            for event in midi_input.read(16):
+                standard_event.append(event[0])
+        print('now press Bass')
+        while aa:
+            if midi_input.poll():
+                for k in midi_input.read(16):
+                    if k[0] not in standard_event:
+                        print(k,standard_event)
+                        bass=k[0]
+                        aa=False
+                        time.sleep(5)
+    
+    if game:
+        game2()
+    else:
+        menu()
+    
+    # Tastatur-Eingabe
